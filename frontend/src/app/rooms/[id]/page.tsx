@@ -1,13 +1,20 @@
 "use client";
 import { socket } from "@/socket";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 export default function Home({ params }: { params: { id: string } }) {
-  const [name, setName] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [name, setName] = useState(searchParams.get("name") as string);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!searchParams.get("name")) {
+      return router.push(`/?roomId=${params.id}`);
+    }
+
     socket.connect();
 
     socket.on("receivedMessage", (data: any) => {
@@ -26,11 +33,11 @@ export default function Home({ params }: { params: { id: string } }) {
       socket.off("receivedMessage");
       socket.off("previousMessage");
     };
-  }, [params]);
+  }, [params, searchParams, router]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    console.log(name, text);
+    setText("");
     socket.emit("sendMessage", {
       message: text,
       author: name,
@@ -39,9 +46,9 @@ export default function Home({ params }: { params: { id: string } }) {
   }
 
   return (
-    <main className="flex w-screen h-screen justify-center items-center flex-col">
+    <main className="flex w-screen h-screen items-center flex-col">
       <form
-        className="flex  justify-center items-center flex-col"
+        className="flex justify-center items-center flex-col mt-5"
         onSubmit={handleSubmit}
       >
         <label htmlFor="name" className="text-white font-bold">
@@ -50,8 +57,9 @@ export default function Home({ params }: { params: { id: string } }) {
         <input
           type="text"
           name="name"
-          className="mb-4 rounded-sm w-80 h-8 text-center p-3"
+          className="mb-4 rounded-md w-80 h-8 text-center p-3 disabled:bg-zinc-600 disabled:text-gray-400"
           value={name}
+          disabled
           onChange={(e) => setName(e.target.value)}
         />
         <label htmlFor="text" className="text-white font-bold">

@@ -14,11 +14,6 @@ const io = new Server(httpServer, {
   },
 });
 
-app.post("/message", (req, res) => {
-  io.emit("message", req.body);
-  return res.json({ ok: true }).status(201);
-});
-
 let messages: {
   message: string;
   author: string;
@@ -26,7 +21,7 @@ let messages: {
 }[] = [];
 io.on("connection", (socket) => {
   let roomId = "";
-  console.log("user connected");
+  console.log(`user ${socket.id} connected`);
 
   socket.on("joinRoom", (data) => {
     roomId = data.roomId;
@@ -47,7 +42,7 @@ io.on("connection", (socket) => {
   );
 
   socket.on("disconnect", function () {
-    console.log("user disconnected");
+    console.log(`user ${socket.id} disconnected`);
   });
 });
 
