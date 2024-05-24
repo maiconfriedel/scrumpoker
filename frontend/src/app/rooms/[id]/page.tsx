@@ -1,19 +1,22 @@
 "use client";
+import Card from "@/components/card";
 import { socket } from "@/socket";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [name, setName] = useState(searchParams.get("name") as string);
-  const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (!searchParams.get("name")) {
       return router.push(`/?roomId=${params.id}`);
     }
+
+    setName(searchParams.get("name") as string);
 
     socket.connect();
 
@@ -29,66 +32,54 @@ export default function Home({ params }: { params: { id: string } }) {
       socket.emit("joinRoom", { roomId: params.id });
     });
 
+    socket.on("visibleChanged", (data: any) => {
+      setVisible(data.visible);
+    });
+
     return () => {
       socket.off("receivedMessage");
       socket.off("previousMessage");
     };
   }, [params, searchParams, router]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setText("");
+  function handleSubmit(message: string) {
     socket.emit("sendMessage", {
-      message: text,
+      message: message,
       author: name,
       roomId: params.id,
     });
   }
 
+  function handleSetVisible() {
+    socket.emit("setVisible", {
+      visible: !visible,
+      roomId: params.id,
+    });
+  }
+
   return (
-    <main className="flex w-screen h-screen items-center flex-col">
-      <form
-        className="flex justify-center items-center flex-col mt-5"
-        onSubmit={handleSubmit}
-      >
-        <label htmlFor="name" className="text-white font-bold">
-          Nome:
-        </label>
-        <input
-          type="text"
-          name="name"
-          className="mb-4 rounded-md w-80 h-8 text-center p-3 disabled:bg-zinc-600 disabled:text-gray-400"
-          value={name}
-          disabled
-          onChange={(e) => setName(e.target.value)}
-        />
-        <label htmlFor="text" className="text-white font-bold">
-          Texto:
-        </label>
-        <textarea
-          name="text"
-          className="mb-4 rounded-sm w-96 p-1"
-          rows={5}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="text-white font-bold bg-black px-5 py-2 rounded-md hover:bg-zinc-800"
-        >
-          Enviar
-        </button>
-      </form>
+    <main className="flex w-screen h-screen items-center justify-center flex-col">
+      <div className="flex flex-row gap-2 flex-wrap">
+        <Card points={1} onClick={() => handleSubmit("1")} />
+        <Card points={2} onClick={() => handleSubmit("2")} />
+        <Card points={3} onClick={() => handleSubmit("3")} />
+        <Card points={5} onClick={() => handleSubmit("5")} />
+        <Card points={8} onClick={() => handleSubmit("8")} />
+        <Card points={13} onClick={() => handleSubmit("13")} />
+        <Card points={21} onClick={() => handleSubmit("21")} />
+      </div>
       <div className="text-white mt-5">
-        <h1 className="text-5xl font-bold mb-3">Mensagens</h1>
-        <ul>
-          {messages.map((message, i) => (
-            <li key={i}>
-              <b className="text-green-600">{message.author}:</b>{" "}
-              {message.message}
-            </li>
-          ))}
-        </ul>
+        <button onClick={() => handleSetVisible()}>Exibir Mensagens</button>
+        {visible && (
+          <ul>
+            {messages.map((message, i) => (
+              <li key={i}>
+                <b className="text-green-600">{message.author}:</b>{" "}
+                {message.message}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </main>
   );
